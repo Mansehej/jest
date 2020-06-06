@@ -7,7 +7,7 @@
 
 import * as path from 'path';
 import * as fs from 'graceful-fs';
-import type {Config} from '@jest/types';
+import type { Config } from '@jest/types';
 import {
   JEST_CONFIG_BASE_NAME,
   JEST_CONFIG_EXT_ORDER,
@@ -44,8 +44,8 @@ export default (pathToResolve: Config.Path, cwd: Config.Path): Config.Path => {
   if (!fs.existsSync(absolutePath)) {
     throw new Error(
       `Can't find a root directory while resolving a config file path.\n` +
-        `Provided path to resolve: ${pathToResolve}\n` +
-        `cwd: ${cwd}`,
+      `Provided path to resolve: ${pathToResolve}\n` +
+      `cwd: ${cwd}`,
     );
   }
 
@@ -60,14 +60,38 @@ const resolveConfigPathByTraversing = (
   const jestConfig = JEST_CONFIG_EXT_ORDER.map(ext =>
     path.resolve(pathToResolve, getConfigFilename(ext)),
   ).find(isFile);
+
+  const packageJson = path.resolve(pathToResolve, PACKAGE_JSON);
+  
+
+  // Should I bifurcate packages/jest-config/src/readConfigFileAndSetRootDir.ts
+  // into a readConfigFile function and set root dir function, and then call 
+  // readConfigFile function here, and if(jestConfig && JSON.Stringify(packageJson.config)!='{}')
+  // then throw warning and return jestConfig?
+  // Also. how do I test if this works properly or not?
+debugger
+  // console.trace()
   if (jestConfig) {
+    if (isFile(packageJson)) {
+      let configObject = require(packageJson);
+      if (configObject.jest) {
+        console.warn('Multiple configurations found:\n\n' +
+        'Jest will use `path/to/jest.config.js` for configuration, but Jest also' + 
+        'found configuration in `path/to/package.json`. Delete the `jest` key' +
+        'in that file to silence this warning, or delete the `jest.config.js` file\n\n' +
+        'to use the configuration from `package.json`.' +      
+        'Configuration Documentation: ' +
+        'https://jestjs.io/docs/en/configuration.html')
+      }
+    }
     return jestConfig;
   }
 
-  const packageJson = path.resolve(pathToResolve, PACKAGE_JSON);
   if (isFile(packageJson)) {
     return packageJson;
   }
+
+  
 
   // This is the system root.
   // We tried everything, config is nowhere to be found ¯\_(ツ)_/¯
